@@ -5,18 +5,36 @@ import { Magnet } from "../components/Magnet";
 
 export const ContactSection: React.FC = () => {
   const [formState, setFormState] = useState({ name: "", email: "", message: "" });
-  const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formState.name || !formState.email || !formState.message) return;
     
     setStatus("sending");
-    setTimeout(() => {
-      setStatus("success");
-      setFormState({ name: "", email: "", message: "" });
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.append("access_key", "85f9a35d-573d-44e8-9751-3c35f52c3d7a");
+
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setStatus("success");
+        setFormState({ name: "", email: "", message: "" });
+        setTimeout(() => setStatus("idle"), 4000);
+      } else {
+        setStatus("error");
+        setTimeout(() => setStatus("idle"), 4000);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setStatus("error");
       setTimeout(() => setStatus("idle"), 4000);
-    }, 1500);
+    }
   };
 
   return (
@@ -143,6 +161,7 @@ export const ContactSection: React.FC = () => {
                     <input
                       type="text"
                       id="name"
+                      name="name"
                       required
                       value={formState.name}
                       onChange={(e) => setFormState({ ...formState, name: e.target.value })}
@@ -158,6 +177,7 @@ export const ContactSection: React.FC = () => {
                     <input
                       type="email"
                       id="email"
+                      name="email"
                       required
                       value={formState.email}
                       onChange={(e) => setFormState({ ...formState, email: e.target.value })}
@@ -172,6 +192,7 @@ export const ContactSection: React.FC = () => {
                     </label>
                     <textarea
                       id="message"
+                      name="message"
                       required
                       rows={5}
                       value={formState.message}
@@ -199,6 +220,11 @@ export const ContactSection: React.FC = () => {
                           <span className="flex items-center gap-1.5 text-emerald-600">
                             Sent Successfully
                             <CheckCircle2 className="h-4 w-4" />
+                          </span>
+                        )}
+                        {status === "error" && (
+                          <span className="flex items-center gap-1.5 text-rose-500">
+                            Failed to Send
                           </span>
                         )}
                       </button>
